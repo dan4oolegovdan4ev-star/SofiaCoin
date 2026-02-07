@@ -1,47 +1,35 @@
 let mining = false;
-const difficulty = 2;
+const difficulty = 3;
 
-function logMining(msg){
-  const logDiv = document.getElementById("miningLog");
-  if(logDiv) logDiv.innerText += msg + "\n";
-  console.log(msg);
+function logMining(msg) {
+  console.log("⛏", msg);
+  const el = document.getElementById("miningLog");
+  if (el) el.innerText += msg + "\n";
 }
 
-// =========================
-// Start / Stop Mining
-// =========================
 function startMining() {
   if (!currentWallet) return alert("Create wallet first");
-  if (!wsBridge || !bridgeConnected) {
-    alert("Wait until bridge is connected...");
+  if (!window.bridgeConnected) {
+    alert("Bridge not connected yet");
     return;
   }
   if (mining) return;
+
   mining = true;
-  logMining("⛏ Mining started!");
+  logMining("Mining started");
   mineNext();
 }
 
 function stopMining() {
   mining = false;
-  logMining("🛑 Mining stopped!");
+  logMining("Mining stopped");
 }
 
-// =========================
-// Main Mining Loop
-// =========================
 function mineNext() {
   if (!mining) return;
 
-  if (minedSoFar >= totalSupply) {
-    alert("🎉 All coins mined!");
-    mining = false;
-    logMining("🎉 All coins mined!");
-    return;
-  }
-
   const reward = 1;
-  const previousHash = blockchain.length > 0 ? blockchain[blockchain.length - 1].hash : "0";
+  const lastBlock = blockchain[blockchain.length - 1];
 
   const block = {
     index: blockchain.length,
@@ -49,7 +37,7 @@ function mineNext() {
       { from: "COINBASE", to: currentWallet.address, amount: reward },
       ...mempool
     ],
-    previousHash,
+    previousHash: lastBlock.hash,
     nonce: 0,
     hash: ""
   };
@@ -59,28 +47,32 @@ function mineNext() {
 
     block.nonce++;
     block.hash = CryptoJS.SHA256(
-      block.index + JSON.stringify(block.transactions) + block.previousHash + block.nonce
+      block.index +
+      JSON.stringify(block.transactions) +
+      block.previousHash +
+      block.nonce
     ).toString();
 
-    logMining(`Nonce: ${block.nonce} | Hash: ${block.hash.substring(0, 10)}...`);
-
-    if(block.hash.substring(0, difficulty) === "0".repeat(difficulty)){
+    if (block.hash.startsWith("0".repeat(difficulty))) {
       blockchain.push(block);
       minedSoFar += reward;
       mempool = [];
-      updateBalance();
 
-      localStorage.setItem("sofiaMinedSoFar", minedSoFar);
       localStorage.setItem("sofiaBlockchain", JSON.stringify(blockchain));
+      localStorage.setItem("sofiaMinedSoFar", minedSoFar);
 
-      if(wsBridge && bridgeConnected){
-        wsBridge.send(JSON.stringify({type:"newBlock", block}));
+      updateBalance();
+      logMining("✅ Block mined: " + block.hash.slice(0, 12));
+
+      if (window.wsBridge && bridgeConnected) {
+        wsBridge.send(JSON.stringify({ type: "newBlock", block }));
       }
 
-      logMining(`✅ Block #${block.index} mined!`);
-
-      setTimeout(mineNext, 0);
+      setTimeout(mineNext, 100);
     } else {
+      if (block.nonce % 500 === 0) {
+        logMining("nonce " + block.nonce);
+      }
       setTimeout(step, 0);
     }
   }

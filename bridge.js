@@ -1,36 +1,34 @@
-let wsBridge = null;
-let bridgeConnected = false;
+// ===============================
+// SofiaCoin Bridge
+// ===============================
+window.wsBridge = null;
+window.bridgeConnected = false;
 
-const BRIDGE_URL = "wss://extraction-log-machinery-nat.trycloudflare.com";
+const BRIDGE_URL = "wss://exclusive-ana-phones-hypothetical.trycloudflare.com";
 
-function connectBridge() {
-  console.log("🌉 Connecting to bridge...");
-  wsBridge = new WebSocket(BRIDGE_URL);
+function connectVPSBridge() {
+  console.log("🌉 Connecting to VPS bridge...");
+  window.wsBridge = new WebSocket(BRIDGE_URL);
 
-  wsBridge.onopen = () => {
-    bridgeConnected = true;
-    console.log("✅ Bridge connected");
-    const logDiv = document.getElementById("miningLog");
-    if(logDiv) logDiv.innerText += "✅ Bridge connected\n";
+  window.wsBridge.onopen = () => {
+    window.bridgeConnected = true;
+    console.log("✅ VPS bridge connected");
   };
 
-  wsBridge.onerror = (e) => {
-    console.error("❌ Bridge error", e);
-    const logDiv = document.getElementById("miningLog");
-    if(logDiv) logDiv.innerText += "❌ Bridge error\n";
+  window.wsBridge.onerror = (e) => {
+    console.error("❌ VPS bridge error", e);
   };
 
-  wsBridge.onclose = () => {
-    bridgeConnected = false;
-    console.log("❌ Bridge disconnected, retrying...");
-    const logDiv = document.getElementById("miningLog");
-    if(logDiv) logDiv.innerText += "❌ Bridge disconnected, retrying...\n";
-    setTimeout(connectBridge, 3000);
+  window.wsBridge.onclose = () => {
+    window.bridgeConnected = false;
+    console.log("❌ VPS bridge disconnected, retrying...");
+    setTimeout(connectVPSBridge, 3000);
   };
 
-  wsBridge.onmessage = (msg) => {
+  window.wsBridge.onmessage = (msg) => {
     try {
       const data = JSON.parse(msg.data);
+
       if (data.type === "sync") {
         blockchain = data.blockchain || [];
         minedSoFar = data.minedSoFar || 0;
@@ -38,28 +36,28 @@ function connectBridge() {
         updateBalance();
         logMining("🔄 Synced from bridge");
       }
+
       if (data.type === "newBlock") {
         blockchain.push(data.block);
         updateBalance();
-        logMining(`⛏️ New block #${data.block.index} received`);
+        logMining("⛏️ New block received");
       }
-    } catch(err){
+
+    } catch (err) {
       console.error("Bridge parse error", err);
     }
   };
 }
 
-// Стартираме автоматично при load
+// стартираме автоматично
 window.addEventListener("load", () => {
-  connectBridge();
+  connectVPSBridge();
 });
 
-// Test bridge function
-function testBridge(){
-  if (!wsBridge) return alert("Bridge not initialized yet!");
-  if (wsBridge.readyState === WebSocket.OPEN) {
-    alert("✅ Bridge is connected!");
-  } else {
-    alert("❌ Bridge is NOT connected!");
-  }
+// ===============================
+// Test bridge
+// ===============================
+function testBridge() {
+  if (window.bridgeConnected) alert("✅ Bridge is connected!");
+  else alert("❌ Bridge not connected");
 }

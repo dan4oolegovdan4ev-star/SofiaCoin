@@ -1,58 +1,61 @@
+// ===============================
+// SofiaCoin Cloudflare Tunnel Bridge
+// ===============================
+
 let wsBridge = null;
 let bridgeConnected = false;
 
-// Тук сложи своя Cloudflare Tunnel WSS адрес
-const BRIDGE_URL = "wss://extraction-log-machinery-nat.trycloudflare.com";
+// Замени с твоя Cloudflare Tunnel линк
+const BRIDGE_URL = "wss://exclusive-ana-phones-hypothetical.trycloudflare.com";
 
-function connectBridge() {
-  console.log("🌉 Connecting to Bridge...");
+function connectVPSBridge() {
+  console.log("🌉 Connecting to Cloudflare Tunnel bridge...");
 
   wsBridge = new WebSocket(BRIDGE_URL);
 
   wsBridge.onopen = () => {
     bridgeConnected = true;
-    console.log("✅ Bridge connected");
+    console.log("✅ Bridge connected!");
   };
 
-  wsBridge.onerror = (e) => console.error("❌ Bridge error", e);
+  wsBridge.onerror = (e) => {
+    console.error("❌ Bridge error", e);
+  };
 
   wsBridge.onclose = () => {
     bridgeConnected = false;
-    console.log("❌ Bridge disconnected, retrying...");
-    setTimeout(connectBridge, 3000);
+    console.log("❌ Bridge disconnected, retrying in 3s...");
+    setTimeout(connectVPSBridge, 3000);
   };
 
   wsBridge.onmessage = (msg) => {
     try {
       const data = JSON.parse(msg.data);
 
-      if(data.type==="sync"){
-        blockchain = data.blockchain||[];
-        minedSoFar = data.minedSoFar||0;
-        mempool=[];
+      // Синхронизация от други майнъри
+      if (data.type === "sync") {
+        blockchain = data.blockchain || [];
+        minedSoFar = data.minedSoFar || 0;
+        mempool = [];
+
         updateBalance();
-        console.log("🔄 Synced from bridge");
+        console.log("🔄 Synced from network");
       }
 
-      if(data.type==="newBlock"){
+      // Нов блок от друг майнер
+      if (data.type === "newBlock") {
         blockchain.push(data.block);
         updateBalance();
-        console.log("⛏️ New block received");
+        console.log("⛏️ New block received:", data.block.hash);
       }
 
-      if(data.type==="tx"){
-        mempool.push(data.tx);
-        updateBalance();
-        console.log("💸 Transaction received");
-      }
-
-    } catch(err){ console.error("Bridge parse error", err); }
+    } catch (err) {
+      console.error("Bridge parse error", err);
+    }
   };
 }
 
-window.addEventListener("load", connectBridge);
-
-function testBridge(){
-  if(bridgeConnected) alert("✅ Bridge is working!");
-  else alert("❌ Bridge not connected yet.");
-}
+// Стартиране автоматично
+window.addEventListener("load", () => {
+  connectVPSBridge();
+});

@@ -1,78 +1,60 @@
 let mining = false;
 const difficulty = 3;
 
-function logMining(msg) {
-  console.log("⛏", msg);
-  const el = document.getElementById("miningLog");
-  if (el) {
-    el.innerText += msg + "\n";
-    el.scrollTop = el.scrollHeight;
-  }
+function log(msg){
+  document.getElementById("miningLog").innerText += msg + "\n";
 }
 
-function startMining() {
-  if (!currentWallet) return alert("Create wallet first");
-  if (!window.bridgeConnected) return alert("Bridge not connected yet");
+function startMining(){
+  if (!currentWallet) return alert("Create wallet");
+  if (!bridgeConnected) return alert("Bridge not connected");
+
   if (mining) return;
-
   mining = true;
-  logMining("Mining started");
-  mineNext();
+  log("⛏ Mining started");
+  mine();
 }
 
-function stopMining() {
+function stopMining(){
   mining = false;
-  logMining("Mining stopped");
+  log("🛑 Mining stopped");
 }
 
-function mineNext() {
+function mine(){
   if (!mining) return;
 
-  const reward = 1;
-  const lastBlock = blockchain[blockchain.length - 1] || {hash:"0"};
+  const last = blockchain[blockchain.length-1];
   const block = {
     index: blockchain.length,
+    previousHash: last.hash,
+    nonce: 0,
     transactions: [
-      { from: "COINBASE", to: currentWallet.address, amount: reward },
+      {from:"COINBASE", to:currentWallet.address, amount:1},
       ...mempool
     ],
-    previousHash: lastBlock.hash,
-    nonce: 0,
     hash: ""
   };
 
-  function step() {
-    if (!mining) return;
-
+  while(true){
     block.nonce++;
     block.hash = CryptoJS.SHA256(
-      block.index +
-      JSON.stringify(block.transactions) +
-      block.previousHash +
-      block.nonce
+      block.index + block.previousHash + block.nonce + JSON.stringify(block.transactions)
     ).toString();
 
-    if (block.hash.startsWith("0".repeat(difficulty))) {
-      blockchain.push(block);
-      minedSoFar += reward;
-      mempool = [];
-
-      localStorage.setItem("sofiaBlockchain", JSON.stringify(blockchain));
-      localStorage.setItem("sofiaMinedSoFar", minedSoFar);
-
-      updateBalance();
-      logMining("✅ Block mined: " + block.hash.slice(0, 12));
-
-      if (window.wsBridge && window.bridgeConnected) {
-        wsBridge.send(JSON.stringify({ type: "newBlock", block }));
-      }
-
-      setTimeout(mineNext, 100);
-    } else {
-      if (block.nonce % 500 === 0) logMining("nonce " + block.nonce);
-      setTimeout(step, 0);
-    }
+    if (block.hash.startsWith("0".repeat(difficulty))) break;
   }
 
-  step();
+  blockchain.push(block);
+  minedSoFar++;
+  mempool = [];
+
+  document.getElementById("balance").innerText =
+    calculateBalance(currentWallet.address);
+  document.getElementById("mined").innerText = minedSoFar;
+
+  wsBridge.send(JSON.stringify({type:"newBlock", block}));
+
+  log("✅ Block mined " + block.hash.slice(0,10));
+
+  setTimeout(mine,10);
 }

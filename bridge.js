@@ -1,61 +1,65 @@
-// ===============================
-// SofiaCoin Cloudflare Tunnel Bridge
-// ===============================
-
 let wsBridge = null;
 let bridgeConnected = false;
 
-// Замени с твоя Cloudflare Tunnel линк
-const BRIDGE_URL = "wss://exclusive-ana-phones-hypothetical.trycloudflare.com";
+const BRIDGE_URL = "wss://extraction-log-machinery-nat.trycloudflare.com";
 
-function connectVPSBridge() {
-  console.log("🌉 Connecting to Cloudflare Tunnel bridge...");
-
+function connectBridge() {
+  console.log("🌉 Connecting to bridge...");
   wsBridge = new WebSocket(BRIDGE_URL);
 
   wsBridge.onopen = () => {
     bridgeConnected = true;
-    console.log("✅ Bridge connected!");
+    console.log("✅ Bridge connected");
+    const logDiv = document.getElementById("miningLog");
+    if(logDiv) logDiv.innerText += "✅ Bridge connected\n";
   };
 
   wsBridge.onerror = (e) => {
     console.error("❌ Bridge error", e);
+    const logDiv = document.getElementById("miningLog");
+    if(logDiv) logDiv.innerText += "❌ Bridge error\n";
   };
 
   wsBridge.onclose = () => {
     bridgeConnected = false;
-    console.log("❌ Bridge disconnected, retrying in 3s...");
-    setTimeout(connectVPSBridge, 3000);
+    console.log("❌ Bridge disconnected, retrying...");
+    const logDiv = document.getElementById("miningLog");
+    if(logDiv) logDiv.innerText += "❌ Bridge disconnected, retrying...\n";
+    setTimeout(connectBridge, 3000);
   };
 
   wsBridge.onmessage = (msg) => {
     try {
       const data = JSON.parse(msg.data);
-
-      // Синхронизация от други майнъри
       if (data.type === "sync") {
         blockchain = data.blockchain || [];
         minedSoFar = data.minedSoFar || 0;
         mempool = [];
-
         updateBalance();
-        console.log("🔄 Synced from network");
+        logMining("🔄 Synced from bridge");
       }
-
-      // Нов блок от друг майнер
       if (data.type === "newBlock") {
         blockchain.push(data.block);
         updateBalance();
-        console.log("⛏️ New block received:", data.block.hash);
+        logMining(`⛏️ New block #${data.block.index} received`);
       }
-
-    } catch (err) {
+    } catch(err){
       console.error("Bridge parse error", err);
     }
   };
 }
 
-// Стартиране автоматично
+// Стартираме автоматично при load
 window.addEventListener("load", () => {
-  connectVPSBridge();
+  connectBridge();
 });
+
+// Test bridge function
+function testBridge(){
+  if (!wsBridge) return alert("Bridge not initialized yet!");
+  if (wsBridge.readyState === WebSocket.OPEN) {
+    alert("✅ Bridge is connected!");
+  } else {
+    alert("❌ Bridge is NOT connected!");
+  }
+}

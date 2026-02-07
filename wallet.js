@@ -1,30 +1,17 @@
-let currentWallet = null;
-let minedSoFar = 0;
-const totalSupply = 100000000;
+import * as bip39 from "https://cdn.skypack.dev/bip39";
+import { ec as EC } from "https://cdn.skypack.dev/elliptic";
+import SHA256 from "https://cdn.skypack.dev/crypto-js/sha256";
 
-function generateSeed() {
-  return Array.from({length:12},()=>WORDLIST[Math.random()*WORDLIST.length|0]).join(" ");
+const ec = new EC("secp256k1");
+
+export function createWallet() {
+  return fromMnemonic(bip39.generateMnemonic(128));
 }
 
-async function sha256(txt) {
-  const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
-  return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-
-async function createWallet() {
-  const seed = generateSeed();
-  const pk = await sha256(seed);
-  const addr = "SOF" + (await sha256(pk)).slice(0,30);
-  currentWallet = {seed,pk,address:addr};
-  localStorage.setItem("sofiaSeed", seed);
-  document.getElementById("address").innerText = addr;
-}
-
-async function importWalletPrompt() {
-  const seed = prompt("Seed:");
-  if (!seed) return;
-  const pk = await sha256(seed);
-  const addr = "SOF" + (await sha256(pk)).slice(0,30);
-  currentWallet = {seed,pk,address:addr};
-  document.getElementById("address").innerText = addr;
+export function fromMnemonic(m) {
+  if (!bip39.validateMnemonic(m)) throw "Invalid seed";
+  const seed = bip39.mnemonicToSeedSync(m).toString("hex");
+  const priv = SHA256(seed).toString();
+  const key = ec.keyFromPrivate(priv);
+  return { mnemonic: m, privateKey: priv, address: key.getPublic("hex") };
 }

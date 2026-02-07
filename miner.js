@@ -1,76 +1,52 @@
-// =========================
-// SofiaCoin Miner (DEBUG)
-// =========================
-
 let mining = false;
 const difficulty = 2;
 
-// shared state (идват от wallet / bridge)
+// Зареждане на minedSoFar и blockchain от localStorage
 let minedSoFar = Number(localStorage.getItem("sofiaMinedSoFar")) || 0;
+let blockchain = JSON.parse(localStorage.getItem("sofiaBlockchain") || "[]");
+let mempool = [];
 
 // =========================
-// UI LOG
-// =========================
-function logMining(msg) {
-  console.log("[MINER]", msg);
-  const el = document.getElementById("miningLog");
-  if (el) {
-    el.textContent += msg + "\n";
-    el.scrollTop = el.scrollHeight;
-  }
-}
-
-// =========================
-// START / STOP
+// Start / Stop Mining
 // =========================
 function startMining() {
-  logMining("▶ Start Mining clicked");
-
-  if (!currentWallet) {
-    logMining("❌ No wallet loaded");
-    alert("Create or import wallet first");
-    return;
-  }
+  if (!currentWallet) return alert("Create wallet first");
 
   if (!wsBridge || !bridgeConnected) {
-    logMining("❌ Bridge NOT connected");
-    alert("Bridge not connected yet");
+    console.log("⏳ Waiting for bridge to connect...");
+    alert("Wait until the bridge is connected...");
     return;
   }
 
-  if (mining) {
-    logMining("⚠ Already mining");
-    return;
-  }
+  if (mining) return;
 
   mining = true;
-  logMining("✅ Mining started");
+  console.log("🚀 Mining started");
   mineNext();
 }
 
 function stopMining() {
   mining = false;
-  logMining("🛑 Mining stopped");
+  console.log("🛑 Mining stopped");
 }
 
 // =========================
-// MAIN MINING LOOP
+// Main Mining Loop
 // =========================
 function mineNext() {
-  if (!mining) {
-    logMining("⏸ Mining paused");
-    return;
-  }
+  if (!mining) return;
+
+  console.log("⛏ Attempting next block...");
 
   if (minedSoFar >= totalSupply) {
-    logMining("🎉 Total supply mined");
+    alert("🎉 All coins mined!");
     mining = false;
+    console.log("🏁 Mining finished, total mined:", minedSoFar);
     return;
   }
 
   const reward = 1;
-  const previousHash =
-    blockchain.length > 0 ? blockchain[blockchain.length - 1].hash : "0";
+  const previousHash = blockchain.length > 0 ? blockchain[blockchain.length - 1].hash : "0";
 
   const block = {
     index: blockchain.length,
@@ -83,45 +59,36 @@ function mineNext() {
     hash: ""
   };
 
-  logMining(`⛏ Mining block #${block.index}`);
-
   function step() {
     if (!mining) return;
 
     block.nonce++;
     block.hash = CryptoJS.SHA256(
-      block.index +
-      JSON.stringify(block.transactions) +
-      block.previousHash +
-      block.nonce
+      block.index + JSON.stringify(block.transactions) + block.previousHash + block.nonce
     ).toString();
 
-    // показваме прогрес от време на време
-    if (block.nonce % 500 === 0) {
-      logMining(`… nonce ${block.nonce}`);
-    }
+    // Показваме прогрес на всеки 1000 опита
+    if (block.nonce % 1000 === 0) console.log("🔹 Nonce:", block.nonce);
 
-    if (block.hash.startsWith("0".repeat(difficulty))) {
+    // Проверка дали hash отговаря на трудността
+    if (block.hash.substring(0, difficulty) === "0".repeat(difficulty)) {
+      console.log("✅ Block mined!", block.hash);
       blockchain.push(block);
       minedSoFar += reward;
       mempool = [];
+      updateBalance();
 
+      // Запазване в localStorage
       localStorage.setItem("sofiaMinedSoFar", minedSoFar);
       localStorage.setItem("sofiaBlockchain", JSON.stringify(blockchain));
 
-      updateBalance();
-
-      logMining(`✅ BLOCK FOUND!`);
-      logMining(`hash: ${block.hash}`);
-      logMining(`reward: +${reward} SFC`);
-
-      // изпращаме към bridge
+      // Изпращане на блока към bridge
       if (wsBridge && bridgeConnected) {
         wsBridge.send(JSON.stringify({ type: "newBlock", block }));
-        logMining("🌐 Block sent to bridge");
       }
 
-      setTimeout(mineNext, 50);
+      // Следващ блок
+      setTimeout(mineNext, 0);
     } else {
       setTimeout(step, 0);
     }
@@ -131,14 +98,17 @@ function mineNext() {
 }
 
 // =========================
-// AUTO INIT
+// Автоматично стартиране на mining, когато bridge е готов
 // =========================
 window.addEventListener("load", () => {
-  logMining("🧠 Miner loaded");
+  const startBtn = document.getElementById("startMiningBtn");
+  if (startBtn) startBtn.onclick = startMining;
 
-  if (bridgeConnected) {
-    logMining("🌉 Bridge already connected");
-  } else {
-    logMining("⏳ Waiting for bridge...");
-  }
+  const checkBridge = setInterval(() => {
+    if (currentWallet && wsBridge && bridgeConnected) {
+      console.log("🌉 Bridge готов, стартирам mining автоматично");
+      startMining();
+      clearInterval(checkBridge);
+    }
+  }, 1000);
 });

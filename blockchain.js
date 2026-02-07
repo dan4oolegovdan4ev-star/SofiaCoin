@@ -1,20 +1,18 @@
-window.blockchain = JSON.parse(localStorage.getItem("sofiaBlockchain") || "[]");
-window.mempool = [];
-window.minedSoFar = Number(localStorage.getItem("sofiaMinedSoFar")) || 0;
+let blockchain = [];
+let mempool = [];
 
-function genesis() {
+function genesisBlock() {
   return {
     index: 0,
-    transactions: [],
     previousHash: "0",
     nonce: 0,
+    transactions: [],
     hash: "GENESIS"
   };
 }
 
 if (blockchain.length === 0) {
-  blockchain.push(genesis());
-  localStorage.setItem("sofiaBlockchain", JSON.stringify(blockchain));
+  blockchain.push(genesisBlock());
 }
 
 function calculateBalance(addr) {

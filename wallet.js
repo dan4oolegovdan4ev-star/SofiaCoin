@@ -1,5 +1,8 @@
 let currentWallet = null;
 const totalSupply = 100_000_000;
+let minedSoFar = Number(localStorage.getItem("sofiaMinedSoFar")) || 0;
+let mempool = [];
+let blockchain = JSON.parse(localStorage.getItem("sofiaBlockchain") || "[]");
 
 // ===== SEED =====
 function generateSeed(){
@@ -70,7 +73,6 @@ function sendTransaction(){
   const tx = {from: currentWallet.address, to, amount};
   mempool.push(tx);
 
-  // Изпращаме транзакцията чрез bridge
   if(wsBridge && bridgeConnected){
     wsBridge.send(JSON.stringify({type:"tx", tx}));
   }
@@ -80,7 +82,7 @@ function sendTransaction(){
   alert("✅ Transaction added to mempool");
 }
 
-// ===== LOAD WALLET FROM LOCALSTORAGE =====
+// ===== LOAD WALLET =====
 window.addEventListener("load", async ()=>{
   const seed = localStorage.getItem("sofiaSeed");
   if(seed){
@@ -90,7 +92,7 @@ window.addEventListener("load", async ()=>{
     showWallet();
   }
 
-  minedSoFar = Number(localStorage.getItem("sofiaMinedSoFar")) || 0;
+  minedSoFar = Number(localStorage.getItem("sofiaMinedSoFar")) || minedSoFar;
   blockchain = JSON.parse(localStorage.getItem("sofiaBlockchain") || "[]");
 
   updateBalance();

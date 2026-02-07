@@ -1,11 +1,11 @@
-let blockchain = JSON.parse(localStorage.getItem("sofiaBlockchain") || "[]");
-let mempool = [];
+let blockchain=[];
+let mempool=[];
 
 function genesis(){
   return {index:0,transactions:[],previousHash:"0",nonce:0,hash:"0"};
 }
 
-if(blockchain.length===0) blockchain.push(genesis());
+blockchain.push(genesis());
 
 function calculateBalance(addr){
   let bal=0;

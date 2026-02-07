@@ -1,99 +1,30 @@
 let currentWallet = null;
-const totalSupply = 100_000_000;
-let minedSoFar = Number(localStorage.getItem("sofiaMinedSoFar")) || 0;
-let mempool = [];
-let blockchain = JSON.parse(localStorage.getItem("sofiaBlockchain") || "[]");
+let minedSoFar = 0;
+const totalSupply = 100000000;
 
-// ===== SEED =====
-function generateSeed(){
-  let words=[];
-  for(let i=0;i<12;i++){
-    words.push(WORDLIST[Math.floor(Math.random()*WORDLIST.length)]);
-  }
-  return words.join(" ");
+function generateSeed() {
+  return Array.from({length:12},()=>WORDLIST[Math.random()*WORDLIST.length|0]).join(" ");
 }
 
-async function seedToPrivateKey(seed){
-  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(seed));
-  return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,"0")).join("");
+async function sha256(txt) {
+  const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+  return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
-async function privateKeyToAddress(pk){
-  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pk));
-  return "SOF"+[...new Uint8Array(hash)].slice(0,20).map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-
-// ===== WALLET =====
-async function createWallet(){
+async function createWallet() {
   const seed = generateSeed();
-  const pk = await seedToPrivateKey(seed);
-  const address = await privateKeyToAddress(pk);
-  currentWallet={seed,pk,address};
-  localStorage.setItem("sofiaSeed",seed);
-  alert("SAVE YOUR SEED PHRASE:\n\n"+seed);
-  showWallet();
+  const pk = await sha256(seed);
+  const addr = "SOF" + (await sha256(pk)).slice(0,30);
+  currentWallet = {seed,pk,address:addr};
+  localStorage.setItem("sofiaSeed", seed);
+  document.getElementById("address").innerText = addr;
 }
 
-async function importWalletPrompt(){
-  const seed = prompt("Enter seed phrase:");
-  if(!seed) return;
-  const pk = await seedToPrivateKey(seed);
-  const address = await privateKeyToAddress(pk);
-  currentWallet={seed,pk,address};
-  localStorage.setItem("sofiaSeed",seed);
-  showWallet();
+async function importWalletPrompt() {
+  const seed = prompt("Seed:");
+  if (!seed) return;
+  const pk = await sha256(seed);
+  const addr = "SOF" + (await sha256(pk)).slice(0,30);
+  currentWallet = {seed,pk,address:addr};
+  document.getElementById("address").innerText = addr;
 }
-
-function showWallet(){
-  document.getElementById("seed").innerText="✅ Saved";
-  document.getElementById("address").innerText=currentWallet.address;
-  updateBalance();
-}
-
-// ===== BALANCE / LOCALSTORAGE =====
-function updateBalance(){
-  if(!currentWallet) return;
-  const bal = calculateBalance(currentWallet.address);
-  document.getElementById("balance").innerText = bal;
-  document.getElementById("mined").innerText = minedSoFar;
-  localStorage.setItem("sofiaMinedSoFar", minedSoFar);
-  localStorage.setItem("sofiaBlockchain", JSON.stringify(blockchain));
-}
-
-// ===== SEND =====
-function sendTransaction(){
-  if(!currentWallet) return alert("Create wallet first");
-  const to = document.getElementById("toAddress").value.trim();
-  const amount = Number(document.getElementById("amount").value);
-  if(!to || amount <= 0) return alert("Invalid address or amount");
-
-  if(calculateBalance(currentWallet.address) < amount)
-    return alert("Not enough balance");
-
-  const tx = {from: currentWallet.address, to, amount};
-  mempool.push(tx);
-
-  if(wsBridge && bridgeConnected){
-    wsBridge.send(JSON.stringify({type:"tx", tx}));
-  }
-
-  document.getElementById("toAddress").value = "";
-  document.getElementById("amount").value = "";
-  alert("✅ Transaction added to mempool");
-}
-
-// ===== LOAD WALLET =====
-window.addEventListener("load", async ()=>{
-  const seed = localStorage.getItem("sofiaSeed");
-  if(seed){
-    const pk = await seedToPrivateKey(seed);
-    const address = await privateKeyToAddress(pk);
-    currentWallet={seed,pk,address};
-    showWallet();
-  }
-
-  minedSoFar = Number(localStorage.getItem("sofiaMinedSoFar")) || minedSoFar;
-  blockchain = JSON.parse(localStorage.getItem("sofiaBlockchain") || "[]");
-
-  updateBalance();
-});

@@ -1,40 +1,76 @@
+// =========================
+// SofiaCoin Miner (DEBUG)
+// =========================
+
 let mining = false;
 const difficulty = 2;
+
+// shared state (идват от wallet / bridge)
 let minedSoFar = Number(localStorage.getItem("sofiaMinedSoFar")) || 0;
-let mempool = [];
 
 // =========================
-// Start / Stop Mining
+// UI LOG
+// =========================
+function logMining(msg) {
+  console.log("[MINER]", msg);
+  const el = document.getElementById("miningLog");
+  if (el) {
+    el.textContent += msg + "\n";
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+// =========================
+// START / STOP
 // =========================
 function startMining() {
-  if (!currentWallet) return alert("Create wallet first");
-  if (!wsBridge || !bridgeConnected) {
-    alert("Wait until bridge is connected...");
+  logMining("▶ Start Mining clicked");
+
+  if (!currentWallet) {
+    logMining("❌ No wallet loaded");
+    alert("Create or import wallet first");
     return;
   }
-  if (mining) return;
+
+  if (!wsBridge || !bridgeConnected) {
+    logMining("❌ Bridge NOT connected");
+    alert("Bridge not connected yet");
+    return;
+  }
+
+  if (mining) {
+    logMining("⚠ Already mining");
+    return;
+  }
+
   mining = true;
+  logMining("✅ Mining started");
   mineNext();
 }
 
 function stopMining() {
   mining = false;
+  logMining("🛑 Mining stopped");
 }
 
 // =========================
-// Main Mining Loop
+// MAIN MINING LOOP
 // =========================
 function mineNext() {
-  if (!mining) return;
+  if (!mining) {
+    logMining("⏸ Mining paused");
+    return;
+  }
 
   if (minedSoFar >= totalSupply) {
-    alert("🎉 All coins mined!");
+    logMining("🎉 Total supply mined");
     mining = false;
     return;
   }
 
   const reward = 1;
-  const previousHash = blockchain.length > 0 ? blockchain[blockchain.length - 1].hash : "0";
+  const previousHash =
+    blockchain.length > 0 ? blockchain[blockchain.length - 1].hash : "0";
 
   const block = {
     index: blockchain.length,
@@ -47,39 +83,62 @@ function mineNext() {
     hash: ""
   };
 
+  logMining(`⛏ Mining block #${block.index}`);
+
   function step() {
     if (!mining) return;
 
     block.nonce++;
     block.hash = CryptoJS.SHA256(
-      block.index + JSON.stringify(block.transactions) + block.previousHash + block.nonce
+      block.index +
+      JSON.stringify(block.transactions) +
+      block.previousHash +
+      block.nonce
     ).toString();
 
-    if(block.hash.substring(0,difficulty) === "0".repeat(difficulty)){
+    // показваме прогрес от време на време
+    if (block.nonce % 500 === 0) {
+      logMining(`… nonce ${block.nonce}`);
+    }
+
+    if (block.hash.startsWith("0".repeat(difficulty))) {
       blockchain.push(block);
       minedSoFar += reward;
       mempool = [];
-      updateBalance();
 
-      // Запазваме minedSoFar и blockchain в localStorage
       localStorage.setItem("sofiaMinedSoFar", minedSoFar);
       localStorage.setItem("sofiaBlockchain", JSON.stringify(blockchain));
 
-      // Изпращаме блока към другите през bridge
-      if(wsBridge && bridgeConnected){
-        wsBridge.send(JSON.stringify({type:"newBlock", block}));
+      updateBalance();
+
+      logMining(`✅ BLOCK FOUND!`);
+      logMining(`hash: ${block.hash}`);
+      logMining(`reward: +${reward} SFC`);
+
+      // изпращаме към bridge
+      if (wsBridge && bridgeConnected) {
+        wsBridge.send(JSON.stringify({ type: "newBlock", block }));
+        logMining("🌐 Block sent to bridge");
       }
 
-      setTimeout(mineNext,0);
+      setTimeout(mineNext, 50);
     } else {
-      setTimeout(step,0);
+      setTimeout(step, 0);
     }
   }
 
   step();
 }
 
-// Автоматично стартиране на mining ако wallet и bridge са готови
+// =========================
+// AUTO INIT
+// =========================
 window.addEventListener("load", () => {
-  if(currentWallet && wsBridge && bridgeConnected) startMining();
+  logMining("🧠 Miner loaded");
+
+  if (bridgeConnected) {
+    logMining("🌉 Bridge already connected");
+  } else {
+    logMining("⏳ Waiting for bridge...");
+  }
 });

@@ -1,44 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bg">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SofiaCoin</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-
-<style>
-body { font-family: Arial; background:#0f172a; color:#e5e7eb; text-align:center; padding:20px;}
-button { padding:10px 18px; margin:5px; border-radius:8px; border:none; cursor:pointer;}
-.card { background:#020617; padding:15px; border-radius:12px; margin-top:15px;}
-pre { background:#020617; padding:10px; height:160px; overflow:auto; text-align:left;}
-</style>
+<title>SofiaCoin (SFC)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
-
 <body>
+<h1>🪙 SofiaCoin (SFC)</h1>
 
-<h1>🪙 SofiaCoin</h1>
+<button id="create">Create Wallet</button>
+<button id="import">Import Wallet</button>
+<button id="mine">Start Mining</button>
+<button id="stop">Stop Mining</button>
 
-<button onclick="createWallet()">Create Wallet</button>
-<button onclick="importWalletPrompt()">Import Wallet</button><br>
+<pre id="out"></pre>
+<div>⛏ Hashrate: <b><span id="speed">0</span> H/s</b></div>
 
-<button onclick="startMining()">⛏ Start Mining</button>
-<button onclick="stopMining()">🛑 Stop Mining</button>
-
-<div class="card"><b>Address</b><p id="address">---</p></div>
-<div class="card"><b>Balance</b><p id="balance">0</p></div>
-<div class="card"><b>Mined</b><p id="mined">0</p></div>
-
-<div class="card">
-<b>Mining log</b>
-<pre id="miningLog"></pre>
-</div>
-
-<script src="wordlist.js"></script>
-<script src="blockchain.js"></script>
-<script src="wallet.js"></script>
-<script src="bridge.js"></script>
-<script src="miner.js"></script>
-
+<script type="module" src="js/app.js"></script>
 </body>
 </html>

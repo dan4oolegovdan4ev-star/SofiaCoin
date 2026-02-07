@@ -1,29 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bg">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SofiaCoin</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-
 <style>
 body { font-family: Arial; background:#0f172a; color:#e5e7eb; text-align:center; padding:20px;}
 button { padding:10px 18px; margin:5px; border-radius:8px; border:none; cursor:pointer;}
 input { padding:8px; width:90%; margin:5px; }
 .card { background:#020617; padding:15px; border-radius:12px; margin-top:15px;}
+#log {background:#111827; color:#facc15; text-align:left; padding:10px; margin-top:15px; height:200px; overflow-y:auto; border-radius:10px; font-family:monospace;}
 </style>
 </head>
 
 <body>
-
 <h1>🪙 SofiaCoin</h1>
 <p>Browser-mined cryptocurrency</p>
 
 <button onclick="createWallet()">Create Wallet</button>
 <button onclick="importWalletPrompt()">Import Wallet</button><br>
 <button onclick="startMining()">⛏ Start Mining</button>
-<button onclick="stopMining()">🛑 Stop Mining</button><br>
-<button onclick="testBridge()">🌉 Test Bridge</button>
+<button onclick="stopMining()">🛑 Stop Mining</button>
 
 <div class="card">
   <b>Seed Phrase</b>
@@ -44,10 +42,7 @@ input { padding:8px; width:90%; margin:5px; }
   <b>Total Mined</b>
   <p><span id="mined">0</span> / 100,000,000</p>
 </div>
-<div class="card">
-  <b>⛏ Mining log</b>
-  <pre id="miningLog" style="text-align:left; max-height:200px; overflow:auto;"></pre>
-</div>
+
 <div class="card">
   <b>Send SofiaCoin</b><br>
   <input id="toAddress" placeholder="Recipient address"><br>
@@ -55,11 +50,33 @@ input { padding:8px; width:90%; margin:5px; }
   <button onclick="sendTransaction()">Send</button>
 </div>
 
-<script src="wordlist.js"></script>
-<script src="blockchain.js"></script>
-<script src="wallet.js"></script>
-<script src="miner.js"></script>
-<script src="bridge.js"></script>
+<div class="card">
+  <b>Mining Log</b>
+  <div id="log">Logs will appear here...</div>
+</div>
 
+<script src="wordlist.js"></script>
+<script src="wallet.js"></script>
+<script src="blockchain.js"></script>
+<script src="miner.js"></script>
+<script src="vps-bridge.js"></script>
+
+<script>
+// Функция за показване на логове в div
+function logMessage(msg){
+  const logDiv = document.getElementById("log");
+  logDiv.innerHTML += msg + "<br>";
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+// Пренасочване на console.log към лог div
+(function(){
+  const origLog = console.log;
+  console.log = function(...args){
+    origLog.apply(console, args);
+    logMessage(args.join(" "));
+  };
+})();
+</script>
 </body>
 </html>

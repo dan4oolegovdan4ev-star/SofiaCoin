@@ -1,12 +1,15 @@
 let mining = false;
 const difficulty = 2;
 
-function logMining(msg) {
-  console.log("⛏️ " + msg);
+function logMining(msg){
   const logDiv = document.getElementById("miningLog");
-  if (logDiv) logDiv.innerText += msg + "\n";
+  if(logDiv) logDiv.innerText += msg + "\n";
+  console.log(msg);
 }
 
+// =========================
+// Start / Stop Mining
+// =========================
 function startMining() {
   if (!currentWallet) return alert("Create wallet first");
   if (!wsBridge || !bridgeConnected) {
@@ -15,22 +18,25 @@ function startMining() {
   }
   if (mining) return;
   mining = true;
-  logMining("Mining started!");
+  logMining("⛏ Mining started!");
   mineNext();
 }
 
 function stopMining() {
   mining = false;
-  logMining("Mining stopped.");
+  logMining("🛑 Mining stopped!");
 }
 
+// =========================
+// Main Mining Loop
+// =========================
 function mineNext() {
   if (!mining) return;
 
   if (minedSoFar >= totalSupply) {
     alert("🎉 All coins mined!");
     mining = false;
-    logMining("All coins mined!");
+    logMining("🎉 All coins mined!");
     return;
   }
 
@@ -56,34 +62,28 @@ function mineNext() {
       block.index + JSON.stringify(block.transactions) + block.previousHash + block.nonce
     ).toString();
 
-    if (block.hash.substring(0, difficulty) === "0".repeat(difficulty)) {
+    logMining(`Nonce: ${block.nonce} | Hash: ${block.hash.substring(0, 10)}...`);
+
+    if(block.hash.substring(0, difficulty) === "0".repeat(difficulty)){
       blockchain.push(block);
       minedSoFar += reward;
       mempool = [];
       updateBalance();
 
-      logMining(`✅ Block #${block.index} mined (nonce=${block.nonce}, hash=${block.hash.substring(0,10)}...)`);
-
       localStorage.setItem("sofiaMinedSoFar", minedSoFar);
       localStorage.setItem("sofiaBlockchain", JSON.stringify(blockchain));
 
-      if (wsBridge && bridgeConnected) {
-        wsBridge.send(JSON.stringify({ type: "newBlock", block }));
-        logMining("🔗 Block sent to bridge");
+      if(wsBridge && bridgeConnected){
+        wsBridge.send(JSON.stringify({type:"newBlock", block}));
       }
+
+      logMining(`✅ Block #${block.index} mined!`);
 
       setTimeout(mineNext, 0);
     } else {
-      if (block.nonce % 1000 === 0) logMining(`Mining... nonce=${block.nonce}`);
       setTimeout(step, 0);
     }
   }
 
   step();
 }
-
-// Авто-стартиране ако wallet и bridge са готови
-window.addEventListener("load", () => {
-  const startBtn = document.getElementById("startMiningBtn");
-  if (startBtn) startBtn.onclick = startMining;
-});

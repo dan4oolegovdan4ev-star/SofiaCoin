@@ -1,63 +1,35 @@
-// ===============================
-// SofiaCoin Bridge
-// ===============================
-window.wsBridge = null;
-window.bridgeConnected = false;
+let wsBridge;
+let bridgeConnected = false;
 
-const BRIDGE_URL = "wss://exclusive-ana-phones-hypothetical.trycloudflare.com";
+const BRIDGE_URL = "wss://extraction-log-machinery-nat.trycloudflare.com";
 
-function connectVPSBridge() {
-  console.log("🌉 Connecting to VPS bridge...");
-  window.wsBridge = new WebSocket(BRIDGE_URL);
+function log(msg){
+  document.getElementById("miningLog").innerText += msg + "\n";
+}
 
-  window.wsBridge.onopen = () => {
-    window.bridgeConnected = true;
-    console.log("✅ VPS bridge connected");
+function connectBridge(){
+  wsBridge = new WebSocket(BRIDGE_URL);
+
+  wsBridge.onopen = ()=>{
+    bridgeConnected = true;
+    log("🌉 Bridge connected");
   };
 
-  window.wsBridge.onerror = (e) => {
-    console.error("❌ VPS bridge error", e);
+  wsBridge.onclose = ()=>{
+    bridgeConnected = false;
+    log("❌ Bridge disconnected");
+    setTimeout(connectBridge,3000);
   };
 
-  window.wsBridge.onclose = () => {
-    window.bridgeConnected = false;
-    console.log("❌ VPS bridge disconnected, retrying...");
-    setTimeout(connectVPSBridge, 3000);
-  };
+  wsBridge.onerror = e => log("Bridge error");
 
-  window.wsBridge.onmessage = (msg) => {
-    try {
-      const data = JSON.parse(msg.data);
-
-      if (data.type === "sync") {
-        blockchain = data.blockchain || [];
-        minedSoFar = data.minedSoFar || 0;
-        mempool = [];
-        updateBalance();
-        logMining("🔄 Synced from bridge");
-      }
-
-      if (data.type === "newBlock") {
-        blockchain.push(data.block);
-        updateBalance();
-        logMining("⛏️ New block received");
-      }
-
-    } catch (err) {
-      console.error("Bridge parse error", err);
+  wsBridge.onmessage = e => {
+    const d = JSON.parse(e.data);
+    if (d.type==="newBlock"){
+      blockchain.push(d.block);
+      log("⬇ Block synced");
     }
   };
 }
 
-// стартираме автоматично
-window.addEventListener("load", () => {
-  connectVPSBridge();
-});
-
-// ===============================
-// Test bridge
-// ===============================
-function testBridge() {
-  if (window.bridgeConnected) alert("✅ Bridge is connected!");
-  else alert("❌ Bridge not connected");
-}
+window.onload = connectBridge;
